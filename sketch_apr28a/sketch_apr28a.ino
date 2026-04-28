@@ -3,11 +3,14 @@ String dummy;
 
 uint16_t sensorValues[8];
 
-int current_position = -40;
-int increment_position = 4;
+
+int minValues[] = {805, 664, 665, 573, 664, 687, 735, 804};
+int maxValues[] = {2500, 2500, 2500, 1514, 2107, 2500, 2500, 2500};
+int weights[] = {-15, -14, -12, -8, 8, 12, 14, 15};
+int divideNum = 8;
 
 int number_samples = 5;
-bool print_directions = true;
+bool print_directions = false;
 
 //hehe red amogus sus :)
 void setup()
@@ -20,25 +23,11 @@ void setup()
 
 void loop()
 {
-
-  if (print_directions)
-  {
-  for (int i = 8; i > 0; i--) {
-    Serial.print("loading: ");
-    Serial.println(i);
-    delay(1000);
-  }
-  Serial.println("--------------");
-  Serial.println("This is the IR sensor calibration script");
-  Serial.println("To use, line up the car/track at the desired position (error value)");
-  Serial.println("Then, press ENTER into the serial monitor input text field.");
-  Serial.println("The leftmost column is the error; the other 8 columns are the 8 sensor values");
-  print_directions = false;
-  }
   //wait for user input
-  while (Serial.available() == 0) {}
-  dummy = Serial.readString();
+  
   int summed_values[8] = {0};
+  int normalizedValues[8] = {0};
+  float weightedSum = 0;
 
   // Take the average of 5 consecutive values for each sensor
   for (int j = 0; j < number_samples; j++){
@@ -58,13 +47,17 @@ void loop()
 
   // Print average values (average value = summed_values / number_samples
   for (unsigned char i = 0; i < 8; i++) {
-    Serial.print(summed_values[i] / number_samples);
-    Serial.print('\t'); // tab to format the raw data into columns in the Serial monitor
+    int avg = summed_values[i] / number_samples;
+    float normalizedValue= (summed_values[i] / number_samples - minValues[i])*(1.0)/(maxValues[i] - minValues[i]) * 1000.0;
+    weightedSum += normalizedValue * weights[i] / divideNum;
+
+    Serial.print(normalizedValue);
+    Serial.print('\t');
   }
+  //Serial.print(weightedSum);
   Serial.println();
 
   // Increment current position by the increment value
-  current_position += increment_position;
-
+  delay(100);
 
 }
