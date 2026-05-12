@@ -15,7 +15,7 @@ class PIDController {
             lastTime = millis();
         }
 
-        double calculate(double value) {
+        int calculate(int value) {
             double now = millis();
             double dt = now - lastTime;
 
