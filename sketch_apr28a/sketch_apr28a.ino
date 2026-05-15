@@ -3,7 +3,6 @@
 String dummy;
 
 uint16_t sensorValues[8];
-void donut();
 //Sensor Fusion Values
 int minValues[] = {805, 664, 665, 573, 664, 687, 735, 804};
 int maxValues[] = {2500, 2500, 2500, 1514, 2107, 2500, 2500, 2500};
@@ -12,14 +11,16 @@ int divideNum = 8;
 
 //motor values
 int motorNotSleep = false;
-int initialSpeed = 100;
+int initialSpeed = 200;
 int minSpeed = 0;
-int maxSpeed = 150;
+int maxSpeed = 255;
+int turnSpeed = 100;
 
 int leftSpeed = initialSpeed;
 int rightSpeed = initialSpeed;
 
 int weightedSum = 0;
+int prevWeight = 0;
 
 //motor pin values
 const int left_nslp_pin=31;
@@ -30,16 +31,17 @@ const int right_dir_pin = 30;
 const int right_pwm_pin = 39;
 
 //PID
-PIDController leftPID = PIDController(0.0225, 0, 0.00125, 0);
-int prevWeight = 0;
-PIDController rightPID = PIDController(1, 0, 0, 0);
+//TODO MOVE CONST UP HERE
+int barCounter = 0;
+int turnCounter = 0;
+int barMissTimer = 0;
 
 //hehe red amogus sus :)
 void setup()
 {
   ECE3_Init();
   Serial.begin(9600); // set the data rate in bits per second for serial data transmission
-  delay(1000);
+  delay(2000);
  
   pinMode(left_nslp_pin,OUTPUT);
   pinMode(left_dir_pin,OUTPUT);
@@ -58,8 +60,38 @@ void setup()
 
 void loop()
 {
-  analogWrite(left_pwm_pin, leftSpeed);
-  analogWrite(right_pwm_pin, rightSpeed);
+  if (barCounter > 1) {
+    barCounter = 0;
+    turnCounter++;
+    barMissTimer = 0;
+    if (turnCounter > 1) {
+      analogWrite(left_pwm_pin, 0);
+      analogWrite(right_pwm_pin, 0);
+      return;
+    } else {
+      digitalWrite(left_dir_pin,HIGH);
+      analogWrite(left_pwm_pin, 0);
+      analogWrite(right_pwm_pin, 0);
+      delay(400);
+      
+      analogWrite(left_pwm_pin, 100);
+      analogWrite(right_pwm_pin, 100);
+      delay(670);
+      digitalWrite(left_dir_pin,LOW);
+      analogWrite(left_pwm_pin, 0);
+      analogWrite(right_pwm_pin, 0);
+      delay(400);
+    }
+  }
+  if (turnCounter > 1) {
+    analogWrite(left_pwm_pin, 0);
+    analogWrite(right_pwm_pin, 0);
+    return;
+  } else {
+    analogWrite(left_pwm_pin, leftSpeed);
+    analogWrite(right_pwm_pin, rightSpeed);
+  }
+  
 
   prevWeight = weightedSum;
   weightedSum = 0;
@@ -70,39 +102,22 @@ void loop()
   for (unsigned char i = 0; i < 8; i++) {
     int normalizedValue = (sensorValues[i] - minValues[i])*(1.0)/(maxValues[i] - minValues[i]) * 1000.0;
     weightedSum += normalizedValue * weights[i] / divideNum;
-    //turnAroundSum += normalizedValue / divideNum;
+    turnAroundSum += normalizedValue / divideNum;
   }
-  // int  PIDNumber = leftPID.calculate(weightedSum);
-  int PIDNumber = - (weightedSum) * 0.0225 + (weightedSum - prevWeight) * 0.05;  
+  int PIDNumber = - (weightedSum) * 0.05 - (weightedSum - prevWeight) * 0.4;  
 
   leftSpeed = initialSpeed + (PIDNumber);
   rightSpeed = initialSpeed - (PIDNumber);
-  // if (turnAroundSum >= 1000)
-  // {
-  //   donut(turnAroundSum);
-  // }
+  //Serial.println(turnAroundSum);
+  if (abs(turnAroundSum) >= 420) {
+    if (barMissTimer > 2000) {
+      barCounter++;
+    }
+  } else {
+    barCounter = 0;
+  }  
+  barMissTimer++;
 
-  leftSpeed  = constrain(leftSpeed, minSpeed, maxSpeed);
-  rightSpeed = constrain(rightSpeed, minSpeed, maxSpeed);
-
-  // Serial.print((weightedSum));
-  // Serial.print(" | ");
-  // Serial.print(PIDNumber);
-  // Serial.print(" | ");
-  // Serial.print(leftSpeed);
-  // Serial.print(" | ");
-  // Serial.print(rightSpeed);
-  // Serial.println();
-}
-
-void donut(int &turnAroundSum)
-{
-  while(turnAroundSum >= 1000)
-  {
-  analogWrite(left_pwm_pin, 90);
-  analogWrite(right_dir_pin , HIGH);
-  analogWrite(right_pwm_pin, 90);
-  delay(10);
-  }
-  analogWrite(right_dir_pin , LOW);
+  leftSpeed = constrain(leftSpeed, 0, 255);  
+  rightSpeed = constrain(rightSpeed, 0, 255);
 }
