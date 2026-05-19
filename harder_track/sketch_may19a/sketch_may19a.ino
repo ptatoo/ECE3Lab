@@ -15,7 +15,7 @@ int divideNum = 8;
 
 //motor values
 int motorNotSleep = false;
-int initialSpeed = 20;
+int initialSpeed = 40;
 int minSpeed = 0;
 int maxSpeed = 255;
 int turnSpeed = 100;
@@ -81,10 +81,11 @@ void loop()
       analogWrite(right_pwm_pin, 0);
       return;
     } else {
+      digitalWrite(right_dir_pin, LOW);
       digitalWrite(left_dir_pin,HIGH);
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
-      delay(400);
+      delay(300);
       
       analogWrite(left_pwm_pin, 100);
       analogWrite(right_pwm_pin, 100);
@@ -92,7 +93,7 @@ void loop()
       digitalWrite(left_dir_pin,LOW);
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
-      delay(400);
+      delay(300);
     }
   }
   //End Sleep
@@ -114,21 +115,16 @@ void loop()
   for (unsigned char i = 0; i < 8; i++) {
     int normalizedValue = (sensorValues[i] - minValues[i])*(1.0)/(maxValues[i] - minValues[i]) * 1000.0;
     //Left vs Right Biased Weights
-    if (timer < 200 && !turned) {
+    if (timer < 50 && !turned) {
       weightedSum = 0;
       digitalWrite(GREEN_LED, HIGH);
       digitalWrite(RED_LED, HIGH);
-    } else if (timer < 200 && turned) {
-      weightedSum += normalizedValue * normalWeights[i] / divideNum;
-      digitalWrite(GREEN_LED, HIGH);
-      digitalWrite(RED_LED, HIGH);
-      
-    } else if (!turned && (timer < 500 || timer > 1400)) {
+    } else if (!turned && (timer < 250 || timer > 650)) {
       weightedSum += normalizedValue * rightBiasedWeights[i] / divideNum;
       digitalWrite(BLUE_LED, LOW);
       digitalWrite(GREEN_LED, LOW);
       digitalWrite(RED_LED, HIGH);
-    } else if (turned && (timer > 300 && timer < 1400)) {
+    } else if (turned && (timer > 150 && timer < 550)) {
       weightedSum += normalizedValue * rightBiasedWeights[i] / divideNum;
       digitalWrite(BLUE_LED, LOW);
       digitalWrite(GREEN_LED, LOW);
@@ -141,7 +137,7 @@ void loop()
     }
     turnAroundSum += normalizedValue / divideNum;
   }
-  int PIDNumber = - (weightedSum) * 0.01 - (weightedSum - prevWeight) * 0.1;  
+  int PIDNumber = - (weightedSum) * 0.02 - (weightedSum - prevWeight) * 0.2;  
 
   leftSpeed = initialSpeed + (PIDNumber);
   rightSpeed = initialSpeed - (PIDNumber);
@@ -150,7 +146,7 @@ void loop()
   //IDEA MAKE TIMER BACK = 0
   //Bar Counter
   if (abs(turnAroundSum) >= 600) {
-    if (barMissTimer > 1700) {
+    if (barMissTimer > 750) {
       barCounter++;
     }
   } else {
@@ -158,6 +154,10 @@ void loop()
   }  
   barMissTimer++;
   timer++;
+  // Serial.print(leftSpeed);
+  // Serial.print(" | ");
+  // Serial.print(rightSpeed);
+  // Serial.println("");
 
   if (leftSpeed < 0) {
     leftSpeed = -1 * leftSpeed;
