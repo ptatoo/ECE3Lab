@@ -72,15 +72,15 @@ void loop()
       digitalWrite(left_dir_pin,HIGH);
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
-      delay(400);
+      delay(75);
       
-      analogWrite(left_pwm_pin, 100);
-      analogWrite(right_pwm_pin, 100);
-      delay(670);
+      analogWrite(left_pwm_pin, 255);
+      analogWrite(right_pwm_pin, 255);
+      delay(345 - 67);
       digitalWrite(left_dir_pin,LOW);
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
-      delay(400);
+      delay(75);
     }
   }
   if (turnCounter > 1) {
@@ -104,7 +104,7 @@ void loop()
     weightedSum += normalizedValue * weights[i] / divideNum;
     turnAroundSum += normalizedValue / divideNum;
   }
-  int PIDNumber = - (weightedSum) * 0.05 - (weightedSum - prevWeight) * 0.4;  
+  int PIDNumber = - (weightedSum) * 0.09 - (weightedSum - prevWeight) * 0.9;  
 
   leftSpeed = initialSpeed + (PIDNumber);
   rightSpeed = initialSpeed - (PIDNumber);
@@ -117,6 +117,9 @@ void loop()
     barCounter = 0;
   }  
   barMissTimer++;
+  if (initialSpeed < 255) {
+    initialSpeed++;
+  }
 
   leftSpeed = constrain(leftSpeed, 0, 255);  
   rightSpeed = constrain(rightSpeed, 0, 255);
