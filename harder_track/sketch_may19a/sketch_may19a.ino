@@ -1,17 +1,21 @@
 #include <ECE3.h>
-#include "PIDController.h"
 String dummy;
 
 uint16_t sensorValues[8];
 //Sensor Fusion Values
 int minValues[] = {805, 664, 665, 573, 664, 687, 735, 804};
 int maxValues[] = {2500, 2500, 2500, 1514, 2107, 2500, 2500, 2500};
-int weights[] = {-15, -14, -12, -8, 8, 12, 14, 15};
+int weights[] = {8, 8, 8, 8, 8, 8, 8, 8};
+int normalWeights[] = {-15, -14, -12, -8, 8, 12, 14, 15};
+int zeroWeights[] = {8, 8, 8, 8, 8, 8, 8, 8};
+int rightBiasedWeights[] = {-18, -16, -14, -8, 8, 9, 10, 11};
+int leftBiasedWeights[] = {-11, -10, -9, -8, 8, 14, 16, 18};
+
 int divideNum = 8;
 
 //motor values
 int motorNotSleep = false;
-int initialSpeed = 200;
+int initialSpeed = 20;
 int minSpeed = 0;
 int maxSpeed = 255;
 int turnSpeed = 100;
@@ -35,10 +39,15 @@ const int right_pwm_pin = 39;
 int barCounter = 0;
 int turnCounter = 0;
 int barMissTimer = 0;
+int timer = 0;
+bool turned = false;
 
 //hehe red amogus sus :)
 void setup()
 {
+  timer = 0;
+  barMissTimer = 0;
+  //weights = rightBiasedWeights;
   ECE3_Init();
   Serial.begin(9600); // set the data rate in bits per second for serial data transmission
   delay(2000);
@@ -64,6 +73,9 @@ void loop()
     barCounter = 0;
     turnCounter++;
     barMissTimer = 0;
+    turned = true;
+    timer = 0;
+    //make 180
     if (turnCounter > 1) {
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
@@ -76,13 +88,14 @@ void loop()
       
       analogWrite(left_pwm_pin, 100);
       analogWrite(right_pwm_pin, 100);
-      delay(670);
+      delay(560);
       digitalWrite(left_dir_pin,LOW);
       analogWrite(left_pwm_pin, 0);
       analogWrite(right_pwm_pin, 0);
       delay(400);
     }
   }
+  //End Sleep
   if (turnCounter > 1) {
     analogWrite(left_pwm_pin, 0);
     analogWrite(right_pwm_pin, 0);
@@ -91,7 +104,6 @@ void loop()
     analogWrite(left_pwm_pin, leftSpeed);
     analogWrite(right_pwm_pin, rightSpeed);
   }
-  
 
   prevWeight = weightedSum;
   weightedSum = 0;
@@ -101,23 +113,65 @@ void loop()
 
   for (unsigned char i = 0; i < 8; i++) {
     int normalizedValue = (sensorValues[i] - minValues[i])*(1.0)/(maxValues[i] - minValues[i]) * 1000.0;
-    weightedSum += normalizedValue * weights[i] / divideNum;
+    //Left vs Right Biased Weights
+    if (timer < 200 && !turned) {
+      weightedSum = 0;
+      digitalWrite(GREEN_LED, HIGH);
+      digitalWrite(RED_LED, HIGH);
+    } else if (timer < 200 && turned) {
+      weightedSum += normalizedValue * normalWeights[i] / divideNum;
+      digitalWrite(GREEN_LED, HIGH);
+      digitalWrite(RED_LED, HIGH);
+      
+    } else if (!turned && (timer < 500 || timer > 1400)) {
+      weightedSum += normalizedValue * rightBiasedWeights[i] / divideNum;
+      digitalWrite(BLUE_LED, LOW);
+      digitalWrite(GREEN_LED, LOW);
+      digitalWrite(RED_LED, HIGH);
+    } else if (turned && (timer > 300 && timer < 1400)) {
+      weightedSum += normalizedValue * rightBiasedWeights[i] / divideNum;
+      digitalWrite(BLUE_LED, LOW);
+      digitalWrite(GREEN_LED, LOW);
+      digitalWrite(RED_LED, HIGH);
+    } else {
+      weightedSum += normalizedValue * leftBiasedWeights[i] / divideNum;
+      digitalWrite(RED_LED, LOW);
+      digitalWrite(BLUE_LED, HIGH);
+      digitalWrite(GREEN_LED, LOW);
+    }
     turnAroundSum += normalizedValue / divideNum;
   }
-  int PIDNumber = - (weightedSum) * 0.05 - (weightedSum - prevWeight) * 0.4;  
+  int PIDNumber = - (weightedSum) * 0.01 - (weightedSum - prevWeight) * 0.1;  
 
   leftSpeed = initialSpeed + (PIDNumber);
   rightSpeed = initialSpeed - (PIDNumber);
-  //Serial.println(turnAroundSum);
-  if (abs(turnAroundSum) >= 420) {
-    if (barMissTimer > 600) {
+
+
+  //IDEA MAKE TIMER BACK = 0
+  //Bar Counter
+  if (abs(turnAroundSum) >= 600) {
+    if (barMissTimer > 1700) {
       barCounter++;
     }
   } else {
     barCounter = 0;
   }  
   barMissTimer++;
+  timer++;
 
-  leftSpeed = constrain(leftSpeed, 0, 255);  
-  rightSpeed = constrain(rightSpeed, 0, 255);
+  if (leftSpeed < 0) {
+    leftSpeed = -1 * leftSpeed;
+    digitalWrite(left_dir_pin,HIGH);
+  } else {
+    digitalWrite(left_dir_pin,LOW);
+  }
+  
+  if (rightSpeed < 0) {
+    rightSpeed = -1 * rightSpeed;
+    digitalWrite(right_dir_pin,HIGH);
+  } else {
+    digitalWrite(right_dir_pin,LOW);
+  }
 }
+
+
