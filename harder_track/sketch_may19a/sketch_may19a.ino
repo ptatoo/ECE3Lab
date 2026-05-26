@@ -1,25 +1,17 @@
 #include <ECE3.h>
-String dummy;
+//HARDER TRACK
 
 uint16_t sensorValues[8];
 //Sensor Fusion Values
 int minValues[] = {805, 664, 665, 573, 664, 687, 735, 804};
 int maxValues[] = {2500, 2500, 2500, 1514, 2107, 2500, 2500, 2500};
-int weights[] = {8, 8, 8, 8, 8, 8, 8, 8};
-int normalWeights[] = {-15, -14, -12, -8, 8, 12, 14, 15};
-int zeroWeights[] = {8, 8, 8, 8, 8, 8, 8, 8};
 int rightBiasedWeights[] = {-18, -16, -14, -8, 8, 9, 10, 11};
 int leftBiasedWeights[] = {-11, -10, -9, -8, 8, 14, 16, 18};
 
 int divideNum = 8;
 
 //motor values
-int motorNotSleep = false;
 int initialSpeed = 40;
-int minSpeed = 0;
-int maxSpeed = 255;
-int turnSpeed = 100;
-
 int leftSpeed = initialSpeed;
 int rightSpeed = initialSpeed;
 
@@ -47,7 +39,6 @@ void setup()
 {
   timer = 0;
   barMissTimer = 0;
-  //weights = rightBiasedWeights;
   ECE3_Init();
   Serial.begin(9600); // set the data rate in bits per second for serial data transmission
   delay(2000);
@@ -124,7 +115,7 @@ void loop()
       digitalWrite(BLUE_LED, LOW);
       digitalWrite(GREEN_LED, LOW);
       digitalWrite(RED_LED, HIGH);
-    } else if (turned && (timer > 150 && timer < 550)) {
+    } else if (turned && (timer > 200 && timer < 600)) {
       weightedSum += normalizedValue * rightBiasedWeights[i] / divideNum;
       digitalWrite(BLUE_LED, LOW);
       digitalWrite(GREEN_LED, LOW);
@@ -142,8 +133,6 @@ void loop()
   leftSpeed = initialSpeed + (PIDNumber);
   rightSpeed = initialSpeed - (PIDNumber);
 
-
-  //IDEA MAKE TIMER BACK = 0
   //Bar Counter
   if (abs(turnAroundSum) >= 600) {
     if (barMissTimer > 750) {
@@ -154,10 +143,6 @@ void loop()
   }  
   barMissTimer++;
   timer++;
-  // Serial.print(leftSpeed);
-  // Serial.print(" | ");
-  // Serial.print(rightSpeed);
-  // Serial.println("");
 
   if (leftSpeed < 0) {
     leftSpeed = -1 * leftSpeed;

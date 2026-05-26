@@ -1,6 +1,5 @@
 #include <ECE3.h>
-#include "PIDController.h"
-String dummy;
+//EASIER TRACK
 
 uint16_t sensorValues[8];
 //Sensor Fusion Values
@@ -10,12 +9,7 @@ int weights[] = {-15, -14, -12, -8, 8, 12, 14, 15};
 int divideNum = 8;
 
 //motor values
-int motorNotSleep = false;
 int initialSpeed = 200;
-int minSpeed = 0;
-int maxSpeed = 255;
-int turnSpeed = 100;
-
 int leftSpeed = initialSpeed;
 int rightSpeed = initialSpeed;
 
@@ -92,7 +86,6 @@ void loop()
     analogWrite(right_pwm_pin, rightSpeed);
   }
   
-
   prevWeight = weightedSum;
   weightedSum = 0;
 
